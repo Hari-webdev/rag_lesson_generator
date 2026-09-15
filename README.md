@@ -1,145 +1,312 @@
 # RAG Lesson Generator 🎓🤖
 
-A production-ready, self-evaluating content generation system powered by **LangGraph**, **Groq**, **Pydantic V2**, **aiosqlite**, and **FastAPI**.
+A production-ready, self-evaluating lesson generation system built with **LangGraph**, **Groq LLMs**, **FastAPI**, **Pydantic V2**, and **SQLite**.
 
-Designed specifically to teach technical concepts to an Indian 12th-grade graduate (A2/B1 English level) through an autonomous cyclical self-correction pipeline.
+The system generates educational content for Indian 12th-grade graduates (A2/B1 English level) and automatically evaluates, reflects, and improves its output through a multi-agent feedback loop until it meets a strict teaching rubric.
 
 ---
 
-## 🏗️ Architecture & LangGraph Workflow
+## ✨ Features
 
-The workflow loops autonomously until the drafted lesson either passes all 6 dimensions of the strict rubric or exhausts the retry limit (`MAX_RETRIES = 2`).
+* Multi-Agent Architecture using LangGraph
+* Autonomous Self-Correction Workflow
+* Structured Lesson Planning
+* Reflection-Based Regeneration
+* FastAPI REST API
+* Persistent Memory with SQLite
+* LangSmith Observability & Evaluation
+* Type-Safe Development with Pydantic V2
+* Async Database Operations using aiosqlite
+
+---
+
+## 🏗️ System Architecture
+
+The workflow continuously improves generated lessons until they satisfy all rubric requirements or reach the configured retry limit.
 
 ```mermaid
 graph TD
     START((START)) --> A[Planner Agent]
     A --> B[Generator Agent]
-    B --> C[Evaluator Agent - Judge]
-    C --> D{Pass 6/6 Rubric?}
-    
-    D -- YES --> E[Final Output & Log Success]
+    B --> C[Evaluator Agent]
+
+    C --> D{Pass Rubric?}
+
+    D -- Yes --> E[Final Lesson]
     E --> END((END))
-    
-    D -- NO --> F{Retry Count < 2?}
-    F -- YES --> G[Reflection Agent]
+
+    D -- No --> F{Retries Remaining?}
+
+    F -- Yes --> G[Reflection Agent]
     G --> H[Regeneration Agent]
     H --> C
-    
-    F -- NO --> I[Fail Output & Rejection Log]
+
+    F -- No --> I[Failure Output]
     I --> END
 ```
 
 ---
 
-## 📋 The 6-Dimension Strict Rubric (Zero Partial Credit)
+## 🤖 Agent Responsibilities
 
-1. **Accuracy**: Factually and conceptually sound. Zero hallucinations.
-2. **Beginner-Friendly**: A2/B1 CEFR English level, short sentences, suitable for 12th-grade Indian graduates.
-3. **Example-Based**: Includes everyday relatable analogies (e.g. school library, open-book examination).
-4. **Jargon Handling**: Technical terms (**Vector**, **Embedding**, **LLM**) must have immediate inline definitions in parentheses.
-5. **Core Concepts**: Must explicitly teach **Retrieval**, **Augmentation**, and **Generation**.
-6. **Teaching Flow**: Must follow the strict structure: `What` ➔ `Why` ➔ `How` ➔ `Everyday Example` ➔ `Summary`.
+| Agent       | Responsibility                               |
+| ----------- | -------------------------------------------- |
+| Planner     | Creates a structured lesson plan             |
+| Generator   | Generates lesson content                     |
+| Evaluator   | Scores lesson against rubric                 |
+| Reflector   | Identifies weaknesses and failure reasons    |
+| Regenerator | Improves lesson based on reflection feedback |
+
+---
+
+## 📋 Evaluation Rubric
+
+The generated lesson must satisfy all of the following dimensions:
+
+1. **Accuracy**
+
+   * Factually correct
+   * No hallucinated information
+
+2. **Beginner Friendly**
+
+   * A2/B1 English level
+   * Suitable for Indian 12th-grade graduates
+
+3. **Example Driven**
+
+   * Uses simple and relatable real-world examples
+
+4. **Jargon Explanation**
+
+   * Technical terms must be immediately explained
+
+5. **Core Concept Coverage**
+
+   * Clearly explains:
+
+     * Retrieval
+     * Augmentation
+     * Generation
+
+6. **Teaching Flow**
+
+   * What
+   * Why
+   * How
+   * Everyday Example
+   * Summary
 
 ---
 
 ## 📁 Project Structure
 
-```plaintext
+```text
 rag_lesson_generator/
-├── .env.example                # Template for OpenAI, LangSmith, and Logfire keys
-├── requirements.txt            # Dependency specification
-├── README.md                   # System documentation
+│
+├── .env.example
+├── README.md
+├── requirements.txt
+│
 ├── tests/
-│   └── test_workflow.py        # Rubric, routing, and memory tests
+│   └── test_workflow.py
+│
 └── src/
-    ├── __init__.py
-    ├── main.py                 # FastAPI server & CLI runner
-    ├── core/
-    │   ├── config.py           # Pydantic Settings & environment
-    │   ├── state.py            # LangGraph TypedDict GraphState
-    │   └── schemas.py          # Pydantic models (Rubric, LessonPlan, RejectionLog)
+    ├── main.py
+    │
     ├── agents/
-    │   ├── planner.py          # Pedagogical curriculum outline planner
-    │   ├── generator.py        # Lesson content creator (A2/B1 level)
-    │   ├── evaluator.py        # Strict 6-dimension rubric judge
-    │   ├── reflector.py        # Surgical failure diagnosis
-    │   └── regenerator.py      # Targeted patch modifier
+    │   ├── planner.py
+    │   ├── generator.py
+    │   ├── evaluator.py
+    │   ├── reflector.py
+    │   └── regenerator.py
+    │
+    ├── core/
+    │   ├── config.py
+    │   ├── schemas.py
+    │   └── state.py
+    │
     ├── graph/
-    │   └── workflow.py         # StateGraph compilation & conditional routing
+    │   └── workflow.py
+    │
     ├── memory/
-    │   ├── database.py         # aiosqlite connection & schema initialization
-    │   └── operations.py       # CRUD operations for learnings & rejection logs
+    │   ├── database.py
+    │   └── operations.py
+    │
     └── observability/
-        ├── logger.py           # Logfire setup & unified logger
-        └── langsmith_eval.py   # LangSmith benchmark evaluation script
+        ├── logger.py
+        └── langsmith_eval.py
 ```
 
 ---
 
-## ⚡ Quickstart & Installation
+## ⚙️ Tech Stack
 
-### 1. Environment Setup
+| Category               | Technology  |
+| ---------------------- | ----------- |
+| Workflow Orchestration | LangGraph   |
+| LLM Provider           | Groq        |
+| API Framework          | FastAPI     |
+| Validation             | Pydantic V2 |
+| Database               | SQLite      |
+| ORM / Async DB         | aiosqlite   |
+| Testing                | Pytest      |
+| Observability          | LangSmith   |
+
+---
+
+## 🚀 Getting Started
+
+### 1. Clone Repository
+
 ```bash
-cd /home/hari-ronin/Documents/rag_lesson_generator
+git clone <repository-url>
+cd rag_lesson_generator
+```
 
-# Create and activate virtual environment
-python3 -m venv venv
+### 2. Create Virtual Environment
+
+Using Python:
+
+```bash
+python -m venv venv
 source venv/bin/activate
+```
 
-# Install dependencies
+Or using Conda:
+
+```bash
+conda create -n rag_lesson_generator python=3.11
+conda activate rag_lesson_generator
+```
+
+### 3. Install Dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
-### 2. Configure Environment Variables
-Copy `.env.example` to `.env` and set your API keys:
+---
+
+## 🔐 Environment Variables
+
+Create a `.env` file:
+
 ```bash
 cp .env.example .env
 ```
-Edit `.env`:
-```ini
-GROQ_API_KEY=gsk_...
+
+Example configuration:
+
+```env
+GROQ_API_KEY=gsk_xxxxxxxxxxxxx
+
 GROQ_MODEL=llama-3.3-70b-versatile
+
 MAX_RETRIES=2
+
 DATABASE_URL=memory.db
 
-# Observability (Optional)
-LOGFIRE_TOKEN=
-LANGCHAIN_TRACING_V2=false
-LANGCHAIN_API_KEY=
-LANGCHAIN_PROJECT=rag_lesson_generator
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=lsv2_xxxxxxxxx
+LANGSMITH_PROJECT=RAG_Lesson_Generator
 ```
 
 ---
 
-## 🚀 Execution Modes
+## ▶️ Running the Application
 
-### Mode 1: Interactive CLI
-Generate a lesson directly in the terminal:
+### CLI Mode
+
+Generate a lesson directly from the terminal:
+
 ```bash
-python -m src.main "Introduction to RAG (Retrieval-Augmented Generation)"
+python -m src.main "Introduction to RAG"
 ```
 
-### Mode 2: FastAPI REST API
-Start the server:
-```bash
-python -m src.main api
-```
-- **API Docs / Swagger UI**: [http://localhost:8000/docs](http://localhost:8000/docs)
-- **POST `/generate`**:
-  ```json
-  {
-    "topic": "Introduction to RAG"
-  }
-  ```
-- **GET `/learnings`**: Inspect past failure modes and persistent knowledge stored in SQLite.
-- **GET `/health`**: Health status.
+---
 
-### Mode 3: Run Unit Tests
+### FastAPI Mode
+
+Start the API server:
+
 ```bash
-pytest tests/ -v
+uvicorn src.main:api --host 0.0.0.0 --port 8000 --reload
 ```
 
-### Mode 4: LangSmith Offline Dataset Evaluation
+Access:
+
+* Swagger UI: http://localhost:8000/docs
+* OpenAPI Schema: http://localhost:8000/openapi.json
+
+---
+
+## 📡 API Endpoints
+
+### Generate Lesson
+
+**POST** `/generate`
+
+Request:
+
+```json
+{
+  "topic": "Introduction to RAG"
+}
+```
+
+Response:
+
+```json
+{
+  "lesson": "...generated content..."
+}
+```
+
+---
+
+### Retrieve Learnings
+
+**GET** `/learnings`
+
+Returns stored reflections, rejection logs, and improvement history.
+
+---
+
+
+## 🧪 Running Tests
+
+```bash
+pytest tests -v
+```
+
+---
+
+## 📊 LangSmith Evaluation
+
+Run offline evaluation against your benchmark dataset:
+
 ```bash
 python -m src.observability.langsmith_eval
+```
+
+---
+
+## 🎯 Use Cases
+
+* AI-Powered Educational Assistants
+* Personalized Learning Systems
+* Self-Evaluating Agent Workflows
+* Reflection-Based Content Generation
+* Multi-Agent LangGraph Applications
+
+---
+
+## 📄 License
+
+MIT License
+
+```
+
+Built for experimentation with autonomous agentic workflows, self-correction loops, and educational content generation.
 ```
